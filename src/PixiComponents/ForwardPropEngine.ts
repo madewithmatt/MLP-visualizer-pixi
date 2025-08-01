@@ -57,7 +57,6 @@ export async function runForwardProp(weights: Tensor2D[], biases: Tensor2D[], in
     promises.push(a.data().then(data => activations.push(data as Float32Array)));
     // Start forward prop
     for (let i = 0; i < weights.length; i++) {
-=
         // weights[i]: [out_dim, in_dim], a: [in_dim, 1]
         // a: [in_dim, 1]
         // Compute weight * activation for each connection: [out_dim, in_dim]
