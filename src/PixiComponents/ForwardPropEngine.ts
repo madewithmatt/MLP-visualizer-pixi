@@ -50,10 +50,11 @@ export async function runForwardProp(weights: Tensor2D[], biases: Tensor2D[], in
     isRunning = true;
     const activations: Float32Array[] = [];
     const weightActivations: Float32Array[] = [];
+    const promises = [];
 
     // Convert input into flattened tensor and push into activations
     let a: tf.Tensor = tf.tensor2d(input.flat(), [28 * 28, 1], "float32");
-    a.data().then(data => activations.push(data as Float32Array));
+    promises.push(a.data().then(data => activations.push(data as Float32Array)));
 
     // Start forward prop
     for (let i = 0; i < weights.length; i++) {
@@ -63,7 +64,7 @@ export async function runForwardProp(weights: Tensor2D[], biases: Tensor2D[], in
         const aT = a.transpose(); // [1, in_dim]
         const w = weights[i].transpose(); // [out_dim, in_dim]
         const wA = w.mul(aT); // [out_dim, in_dim]
-        wA.data().then(data => weightActivations.push(data as Float32Array));
+        promises.push(wA.data().then(data => weightActivations.push(data as Float32Array)));
 
         // preactivation z = W * a + b:
         // since we already have wA consider leveraging it for faster calc
@@ -78,9 +79,18 @@ export async function runForwardProp(weights: Tensor2D[], biases: Tensor2D[], in
         }
 
         // push a to activations
-        a.data().then(data => activations.push(data as Float32Array));
+        promises.push(a.data().then(data => activations.push(data as Float32Array)));
     }
+    // Get top 2 predictions as promise
+    const { indices } = tf.topk(a.reshape([-1]), 2);
+    promises.push(indices.data());
+
+    // Wait all promises that havent finished yet
+    const results = await Promise.all(promises);
+
+    // Retrieve top predictions (top predictions is always last promise)
+    const indicesArray = results[results.length - 1] as Float32Array
 
     isRunning = false;
-    return { weightActivations, activations };
+    return { weightActivations, activations, prediction1: indicesArray[0], prediction2: indicesArray[1] };
 }
