@@ -1,6 +1,6 @@
 import { Application, Container, Sprite, Texture, Point, Rectangle } from "pixi.js";
 import { initializeGrids, paintAt } from "./PixiComponents/GridContainer";
-import { initializeEngine } from "./PixiComponents/ForwardPropEngine";
+import { initializeEngine, runForwardProp } from "./PixiComponents/ForwardPropEngine";
 
 (async () => {
 
@@ -44,6 +44,7 @@ import { initializeEngine } from "./PixiComponents/ForwardPropEngine";
 
   app.canvas.addEventListener("pointerup", () => {
   isDrawing = false;
+  runForwardProp(weights, biases, pixelData);
   });
 
   // Resize when the window is resized

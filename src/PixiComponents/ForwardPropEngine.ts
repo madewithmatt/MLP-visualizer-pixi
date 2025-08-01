@@ -55,25 +55,25 @@ export async function runForwardProp(weights: Tensor2D[], biases: Tensor2D[], in
     // Convert input into flattened tensor and push into activations
     let a: tf.Tensor = tf.tensor2d(input.flat(), [28 * 28, 1], "float32");
     promises.push(a.data().then(data => activations.push(data as Float32Array)));
-
     // Start forward prop
     for (let i = 0; i < weights.length; i++) {
-        // weights[i]: [in_dim, out_dim], a: [in_dim, 1]
+=
+        // weights[i]: [out_dim, in_dim], a: [in_dim, 1]
         // a: [in_dim, 1]
         // Compute weight * activation for each connection: [out_dim, in_dim]
         const aT = a.transpose(); // [1, in_dim]
-        const w = weights[i].transpose(); // [out_dim, in_dim]
-        const wA = w.mul(aT); // [out_dim, in_dim]
+        const wT = weights[i].transpose(); // [in_dim, out_dim]
+        const wA = wT.mul(a); // [out_dim, in_dim]
         promises.push(wA.data().then(data => weightActivations.push(data as Float32Array)));
 
         // preactivation z = W * a + b:
         // since we already have wA consider leveraging it for faster calc
-        const z = tf.add(tf.matMul(w, a), biases[i]); // [out_dim, 1]
+        const z = tf.add(tf.matMul(weights[i], a), biases[i]); // [out_dim, 1]
 
         // Wait for a.data() to be done
         // Activation functions
         if (i === weights.length - 1) {
-            a = tf.softmax(z, 0);
+            a = tf.softmax(z.transpose()).transpose();
         } else {
             a = tf.relu(z);
         }
@@ -92,5 +92,8 @@ export async function runForwardProp(weights: Tensor2D[], biases: Tensor2D[], in
     const indicesArray = results[results.length - 1] as Float32Array
 
     isRunning = false;
+    console.log("prediction1: ", indicesArray[0]);
+    console.log("prediction2: ", indicesArray[1]);
+
     return { weightActivations, activations, prediction1: indicesArray[0], prediction2: indicesArray[1] };
 }
