@@ -1,5 +1,6 @@
 import { Application, Container, Sprite, Texture, Point, Rectangle } from "pixi.js";
 import { initializeGrids, paintAt } from "./PixiComponents/GridContainer";
+import { initializeEngine } from "./PixiComponents/ForwardPropEngine";
 
 (async () => {
 
@@ -20,10 +21,13 @@ import { initializeGrids, paintAt } from "./PixiComponents/GridContainer";
   app.stage.addChild(gridContainer);
 
   // ================= INITIALIZE FORWARD PROP ENGINE ================== //
+  const { weights, biases } = await initializeEngine();
+  console.log(weights[0].shape);
+  console.log(biases[0].shape);
   
 
   // ======================= EVENT LISTENERS ========================== //
-  // Add event listeners for the grid
+  // Add event listeners to the grid
   let isDrawing = false;
 
   gridContainer.on("pointerdown", (e) => {
@@ -40,7 +44,6 @@ import { initializeGrids, paintAt } from "./PixiComponents/GridContainer";
 
   app.canvas.addEventListener("pointerup", () => {
   isDrawing = false;
-  console.log(JSON.stringify(pixelData));
   });
 
   // Resize when the window is resized

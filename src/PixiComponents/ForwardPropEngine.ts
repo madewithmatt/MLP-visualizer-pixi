@@ -5,6 +5,7 @@ type ParamsType = {
     [key: string] : number[][];
 }
 
+let isRunning = false;
 
 export async function initializeEngine() {
     // Set tf to use webgl for faster computation
@@ -34,4 +35,52 @@ const createTensorsFromParams = (params: ParamsType) : { weights: Tensor2D[], bi
         }
     });
     return { weights: Ws, biases: bs};
+}
+
+/**
+ * Returns weight*activations and activation values.
+ * PLEASE DISPOSE OF TENSORS AFTER USE!!!!
+ * @param weights 
+ * @param biases 
+ * @param input number[][]
+ * @returns weightActivations: Float32Array[] and activations: Float32Array
+ */
+export async function runForwardProp(weights: Tensor2D[], biases: Tensor2D[], input: number[][]) {
+    if (isRunning) return null;
+    isRunning = true;
+    const activations: Float32Array[] = [];
+    const weightActivations: Float32Array[] = [];
+
+    // Convert input into flattened tensor and push into activations
+    let a: tf.Tensor = tf.tensor2d(input.flat(), [28 * 28, 1], "float32");
+    a.data().then(data => activations.push(data as Float32Array));
+
+    // Start forward prop
+    for (let i = 0; i < weights.length; i++) {
+        // weights[i]: [in_dim, out_dim], a: [in_dim, 1]
+        // a: [in_dim, 1]
+        // Compute weight * activation for each connection: [out_dim, in_dim]
+        const aT = a.transpose(); // [1, in_dim]
+        const w = weights[i].transpose(); // [out_dim, in_dim]
+        const wA = w.mul(aT); // [out_dim, in_dim]
+        wA.data().then(data => weightActivations.push(data as Float32Array));
+
+        // preactivation z = W * a + b:
+        // since we already have wA consider leveraging it for faster calc
+        const z = tf.add(tf.matMul(w, a), biases[i]); // [out_dim, 1]
+
+        // Wait for a.data() to be done
+        // Activation functions
+        if (i === weights.length - 1) {
+            a = tf.softmax(z, 0);
+        } else {
+            a = tf.relu(z);
+        }
+
+        // push a to activations
+        a.data().then(data => activations.push(data as Float32Array));
+    }
+
+    isRunning = false;
+    return { weightActivations, activations };
 }
